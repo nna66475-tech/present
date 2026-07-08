@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>神経衰弱ウェブゲーム</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #1a1a1a;
+            font-family: 'Courier New', Courier, monospace, 'Helvetica Neue', Arial, sans-serif;
+            
+            /* 画面全体のド真ん中にコンテンツを固定する設定 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        /* 全体コンテナ (画面の縦横どちらにも絶対にはみ出さない、完全に中央固定された正方形) */
+        .game-container {
+            width: min(95vw, 95vh, 800px);
+            height: min(95vw, 95vh, 800px);
+            background-color: #222;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 35px rgba(0,0,0,0.8);
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 各画面のベーススタイル */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 5%;
+            z-index: 10;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        :root {
+            --main-color: #C91034;
+            --main-color-hover: #e02448;
+            --bg-brown: #5c4033;
+        }
+
+        /* レトロボタン */
+        .retro-btn {
+            background-color: var(--main-color);
+            color: #fff;
+            border: 4px solid #fff;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 4px 4px 0px #000;
+            transition: transform 0.1s, box-shadow 0.1s;
+            margin-top: 15px;
+            text-align: center;
+        }
+        .retro-btn:hover {
+            background-color: var(--main-color-hover);
+        }
+        .retro-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px #000;
+        }
+
+        /* １：タイトル画面 */
+        #title-screen {
+            background-color: #151515;
+            cursor: pointer;
+        }
+        .logo-img {
+            max-width: 85%;
+            max-height: 50%;
+            object-fit: contain;
+            animation: wobble 2s infinite ease-in-out;
+        }
+        @keyframes wobble {
+            0%, 100% { transform: rotate(-3deg) translateY(0); }
+            50% { transform: rotate(3deg) translateY(-10px); }
+        }
+        .click-to-start {
+            color: #888;
+            margin-top: 30px;
+            font-size: 16px;
+            animation: blink 1.5s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* ２：キャラ選択画面 */
+        #select-screen {
+            background-color: #1c1c1c;
+        }
+        .screen-title {
+            color: #fff;
+            font-size: 22px;
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+        }
+        .char-layout {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .char-icon-wrapper {
+            width: 160px;
+            height: 160px;
+            border: 4px solid var(--main-color);
+            background-color: #000;
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+            overflow: hidden;
+            display: flex;
+            justify-content: center; /* タイポを修正して中央揃えを有効化 */
+            align-items: center;
+            box-shadow: 0 0 15px rgba(201, 16, 52, 0.3);
+        }
+        .char-icon-wrapper:hover {
+            transform: scale(1.05);
+            border-color: #fff;
+        }
+        .char-icon {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            image-rendering: pixelated;
+        }
+        .char-name {
+            color: #fff;
+            margin-top: 12px;
+            font-size: 16px;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+
+        /* ４：対戦前画面 */
+        #pre-match-screen {
+            background-color: #1a1a1a;
+        }
+        .tiki-img {
+            max-width: 80%;
+            max-height: 55%;
+            object-fit: contain;
+            image-rendering: pixelated;
+            margin-bottom: 20px;
+        }
+
+        /* ５：対戦画面 */
+        #game-screen {
+            background-color: var(--bg-brown);
+            display: none;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            padding: 5%;
+        }
+        #game-screen.active {
+            display: flex;
+        }
+        .game-header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #fff;
+            background: rgba(0,0,0,0.5);
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 5%;
+        }
+        .turn-indicator {
+            font-weight: bold;
+        }
+        .turn-indicator.player-turn { color: #4caf50; }
+        .turn-indicator.cpu-turn { color: #f44336; }
+
+        /* 4x4 盤面 */
+        .board-container {
+            width: 100%;
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .grid-board {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-rows: repeat(4, minmax(0, 1fr));
+            gap: 2%;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* カードの比率維持 */
+        .card-slot {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            container-type: size;
+        }
+        .card {
+            width: min(100cqw, 100cqh * (499 / 768));
+            height: 100%;
+            max-height: 100%;
+            aspect-ratio: 499 / 768;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.4s ease-out;
+            cursor: pointer;
+            animation: fadeIn 0.8s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+        .card.matched {
+            pointer-events: none;
+            opacity: 0.4;
+            transform: rotateY(180deg) scale(0.95);
+        }
+        .card-face {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            object-fit: contain;
+            image-rendering: pixelated;
+        }
+        .card-back {
+            background-color: #2e1f18;
+            border: 2px solid #fff;
+            border-radius: 4px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .card-back::after {
+            content: "★";
+            color: rgba(255,255,255,0.2);
+            font-size: 18px;
+        }
+        .card-front {
+            transform: rotateY(180deg);
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        /* ７＆８：勝敗画面 */
+        .result-img-box {
+            max-width: 70%;
+            max-height: 50%;
+            object-fit: contain;
+            image-rendering: pixelated;
+            margin-bottom: 15px;
+        }
+        .result-text-img {
+            max-width: 60%;
+            height: auto;
+            object-fit: contain;
+            image-rendering: pixelated;
+            margin-bottom: 20px;
+        }
+        .result-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        /* トランジション演出レイヤー */
+        #transition-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--main-color);
+            z-index: 100;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+        #transition-overlay.active {
+            opacity: 1;
+        }
+
+        /* フェード効果用クラス */
+        .fade-out-active {
+            animation: fadeOutEffect 0.5s forwards ease-in-out;
+        }
+        @keyframes fadeOutEffect {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        /* アイリスイン・アウト演出（SVGバグ回避・完全CSS方式） */
+        #transition-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            box-shadow: 0 0 0 200vmax var(--main-color);
+            z-index: 9999;
+            pointer-events: none;
+            transition: width 0.6s ease-in-out, height 0.6s ease-in-out;
+        }
+        .iris-open {
+            width: 200vmax;
+            height: 200vmax;
+        }
+        .iris-closed {
+            width: 0;
+            height: 0;
+        }
+
+        /* 小さい画面用レスポンシブ微調整 */
+        @media (max-width: 500px) , (max-height: 500px) {
+            .screen-title { font-size: 16px; margin-bottom: 10px; }
+            .char-icon-wrapper { width: 110px; height: 110px; }
+            .retro-btn { padding: 8px 16px; font-size: 12px; }
+            .game-header { font-size: 11px; padding: 6px 10px; margin-bottom: 3%; }
+        }
+    </style>
+</head>
+<body>
+    <!-- トランジション演出レイヤー -->
+    <div id="transition-overlay" class="iris-open"></div>
+
+    <div class="game-container">
+
+        <!-- １：タイトル画面 -->
+        <div id="title-screen" class="screen active">
+            <img src="logo.PNG" alt="神経衰弱" class="logo-img">
+            <div class="click-to-start">CLICK TO START</div>
+        </div>
+
+        <!-- ２：キャラ選択画面 -->
+        <div id="select-screen" class="screen">
+            <div class="screen-title">キャラクター選択</div>
+            <div class="char-layout">
+                <div class="char-icon-wrapper" id="char-anzu-btn">
+                    <img src="icon_anzu.PNG" alt="美影杏" class="char-icon">
+                </div>
+                <div class="char-name">美影杏</div>
+            </div>
+        </div>
+
+        <!-- ４：対戦前画面 -->
+        <div id="pre-match-screen" class="screen">
+            <img src="anzu_tiki.gif" alt="対戦前" class="tiki-img">
+            <button class="retro-btn" id="start-match-btn">対戦する</button>
+        </div>
+
+        <!-- ５：対戦画面 -->
+        <div id="game-screen" class="screen">
+            <div class="game-header">
+                <div id="turn-display" class="turn-indicator player-turn">あなたのターン</div>
+                <div>あなた: <span id="player-score">0</span> | あんず: <span id="cpu-score">0</span></div>
+            </div>
+            <div class="board-container">
+                <div class="grid-board" id="board"></div>
+            </div>
+        </div>
+
+        <!-- ７：勝利画面 -->
+        <div id="win-screen" class="screen">
+            <img src="anzu_lose.gif" alt="勝利" class="result-img-box">
+            <img src="moji_win.PNG" alt="WIN!" class="result-text-img">
+            <div class="result-buttons">
+                <button class="retro-btn" id="retry-win-btn">もう一度対戦してあげる</button>
+                <button class="retro-btn" id="home-win-btn">ホームに戻る</button>
+            </div>
+        </div>
+
+        <!-- ８：敗北画面 -->
+        <div id="lose-screen" class="screen">
+            <img src="anzu_win.gif" alt="敗北" class="result-img-box">
+            <img src="moji_lose.PNG" alt="LOSE..." class="result-text-img">
+            <div class="result-buttons">
+                <button class="retro-btn" id="retry-lose-btn">もう一度対戦してもらう</button>
+                <button class="retro-btn" id="home-lose-btn">ホームに戻る</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- オーディオ設定 -->
+    <audio id="bgm" src="maou_bgm_8bit26.mp3" loop></audio>
+    <audio id="se-select" src="se_select_008.wav"></audio>
+    <audio id="se-clear" src="jingle_original_clear_001.wav"></audio>
+    <audio id="se-die" src="jingle_original_die_002.wav"></audio>
+
+    <script>
+        const bgm = document.getElementById('bgm');
+        const seSelect = document.getElementById('se-select');
+        const seClear = document.getElementById('se-clear');
+        const seDie = document.getElementById('se-die');
+
+        function playBGM() {
+            bgm.play().catch(e => console.log("BGM waiting user action"));
+        }
+        function stopBGM() {
+            bgm.pause();
+            bgm.currentTime = 0;
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function triggerTransition(onComplete) {
+            const overlay = document.getElementById('transition-overlay');
+            
+            // アイリスイン（閉じる）
+            overlay.classList.remove('iris-open');
+            overlay.classList.add('iris-closed');
+
+            setTimeout(() => {
+                if(onComplete) onComplete();
+                
+                // アイリスアウト（開く）
+                overlay.classList.remove('iris-closed');
+                overlay.classList.add('iris-open');
+            }, 600);
+        }
+
+        document.getElementById('title-screen').addEventListener('click', () => {
+            seSelect.play();
+            playBGM();
+            const title = document.getElementById('title-screen');
+            title.classList.add('fade-out-active');
+            setTimeout(() => {
+                title.classList.remove('fade-out-active');
+                showScreen('select-screen');
+            }, 500);
+        });
+
+        document.getElementById('char-anzu-btn').addEventListener('click', () => {
+            seSelect.play();
+            triggerTransition(() => {
+                showScreen('pre-match-screen');
+            });
+        });
+
+        document.getElementById('start-match-btn').addEventListener('click', () => {
+            seSelect.play();
+            initGame();
+            showScreen('game-screen');
+        });
+
+        const cardsData = [
+            'cards1.PNG', 'cards2.PNG', 'cards3.PNG', 'cards4.PNG',
+            'cards5.PNG', 'cards6.PNG', 'cards7.PNG', 'cards8.PNG'
+        ];
+        let cards = [];
+        let flippedCards = [];
+        let playerScore = 0;
+        let cpuScore = 0;
+        let isPlayerTurn = true;
+        let canClick = true;
+        let cpuMemory = {};
+
+        function initGame() {
+            playerScore = 0;
+            cpuScore = 0;
+            isPlayerTurn = true;
+            canClick = true;
+            flippedCards = [];
+            cpuMemory = {};
+            document.getElementById('player-score').textContent = '0';
+            document.getElementById('cpu-score').textContent = '0';
+            updateTurnDisplay();
+
+            const deck = [...cardsData, ...cardsData];
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+
+            cards = deck.map((img, index) => {
+                const slot = document.createElement('div');
+                slot.className = 'card-slot';
+
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.dataset.id = index;
+                card.dataset.img = img;
+
+                const back = document.createElement('div');
+                back.className = 'card-face card-back';
+
+                const front = document.createElement('img');
+                front.className = 'card-face card-front';
+                front.src = img;
+
+                card.appendChild(back);
+                card.appendChild(front);
+                slot.appendChild(card);
+                board.appendChild(slot);
+
+                card.addEventListener('click', () => handleCardClick(card));
+
+                return card;
+            });
+        }
+
+        function updateTurnDisplay() {
+            const display = document.getElementById('turn-display');
+            if (isPlayerTurn) {
+                display.textContent = 'あなたのターン';
+                display.className = 'turn-indicator player-turn';
+            } else {
+                display.textContent = 'あんずのターン';
+                display.className = 'turn-indicator cpu-turn';
+            }
+        }
+
+        function handleCardClick(card) {
+            if (!isPlayerTurn || !canClick || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+
+            flipCard(card);
+            flippedCards.push(card);
+
+            if (flippedCards.length === 2) {
+                canClick = false;
+                checkMatch();
+            }
+        }
+
+        function flipCard(card) {
+            card.classList.add('flipped');
+            cpuMemory[card.dataset.id] = card.dataset.img;
+        }
+
+        function checkMatch() {
+            const [card1, card2] = flippedCards;
+            const isMatch = card1.dataset.img === card2.dataset.img;
+
+            setTimeout(() => {
+                if (isMatch) {
+                    card1.classList.add('matched');
+                    card2.classList.add('matched');
+                    delete cpuMemory[card1.dataset.id];
+                    delete cpuMemory[card2.dataset.id];
+
+                    if (isPlayerTurn) {
+                        playerScore++;
+                        document.getElementById('player-score').textContent = playerScore;
+                    } else {
+                        cpuScore++;
+                        document.getElementById('cpu-score').textContent = cpuScore;
+                    }
+
+                    flippedCards = [];
+                    if (checkGameOver()) {
+                        endGame();
+                    } else {
+                        canClick = isPlayerTurn;
+                        if (!isPlayerTurn) {
+                            setTimeout(cpuTurn, 800);
+                        }
+                    }
+                } else {
+                    card1.classList.remove('flipped');
+                    card2.classList.remove('flipped');
+                    flippedCards = [];
+                    
+                    isPlayerTurn = !isPlayerTurn;
+                    updateTurnDisplay();
+
+                    if (!isPlayerTurn) {
+                        setTimeout(cpuTurn, 800);
+                    } else {
+                        canClick = true;
+                    }
+                }
+            }, 1000);
+        }
+
+        function checkGameOver() {
+            return cards.every(card => card.classList.contains('matched'));
+        }
+
+        function cpuTurn() {
+            if (checkGameOver()) return;
+
+            const availableCards = cards.filter(c => !c.classList.contains('matched'));
+            let choice1 = null;
+            let choice2 = null;
+            let foundPair = null;
+            const memoryIds = Object.keys(cpuMemory);
+            
+            for (let i = 0; i < memoryIds.length; i++) {
+                for (let j = i + 1; j < memoryIds.length; j++) {
+                    const id1 = memoryIds[i];
+                    const id2 = memoryIds[j];
+                    if (cpuMemory[id1] === cpuMemory[id2] && id1 !== id2) {
+                        const c1 = cards[id1];
+                        const c2 = cards[id2];
+                        if (!c1.classList.contains('matched') && !c2.classList.contains('matched')) {
+                            foundPair = [c1, c2];
+                            break;
+                        }
+                    }
+                }
+                if (foundPair) break;
+            }
+
+            if (foundPair && Math.random() < 0.6) {
+                choice1 = foundPair[0];
+                choice2 = foundPair[1];
+            } else {
+                choice1 = availableCards[Math.floor(Math.random() * availableCards.length)];
+                let knownMatch = null;
+                for (let id in cpuMemory) {
+                    if (id !== choice1.dataset.id && cpuMemory[id] === choice1.dataset.img) {
+                        const potentialMatch = cards[id];
+                        if (!potentialMatch.classList.contains('matched')) {
+                            knownMatch = potentialMatch;
+                            break;
+                        }
+                    }
+                }
+
+                if (knownMatch && Math.random() < 0.5) {
+                    choice2 = knownMatch;
+                } else {
+                    const remaining = availableCards.filter(c => c.dataset.id !== choice1.dataset.id);
+                    choice2 = remaining[Math.floor(Math.random() * remaining.length)];
+                }
+            }
+
+            flipCard(choice1);
+            flippedCards.push(choice1);
+
+            setTimeout(() => {
+                flipCard(choice2);
+                flippedCards.push(choice2);
+                checkMatch();
+            }, 800);
+        }
+
+        function endGame() {
+            stopBGM();
+            setTimeout(() => {
+                if (playerScore >= cpuScore) {
+                    seClear.play();
+                    showScreen('win-screen');
+                } else {
+                    seDie.play();
+                    showScreen('lose-screen');
+                }
+            }, 500);
+        }
+
+        document.getElementById('retry-win-btn').addEventListener('click', () => { seSelect.play(); playBGM(); initGame(); showScreen('game-screen'); });
+        document.getElementById('retry-lose-btn').addEventListener('click', () => { seSelect.play(); playBGM(); initGame(); showScreen('game-screen'); });
+        document.getElementById('home-win-btn').addEventListener('click', () => { seSelect.play(); playBGM(); showScreen('select-screen'); });
+        document.getElementById('home-lose-btn').addEventListener('click', () => { seSelect.play(); playBGM(); showScreen('select-screen'); });
+    </script>
+</body>
+</html>
