@@ -309,6 +309,91 @@ body, html {
     justify-content: center;
 }
 
+/* Hidden NPC Screen */
+#hidden-npc-screen {
+    background-color: #111;
+}
+.retro-input {
+    background-color: #000;
+    color: #fff;
+    border: 4px solid #fff;
+    padding: 15px;
+    font-size: 20px;
+    font-family: 'DotGothic16', monospace;
+    width: 80%;
+    max-width: 400px;
+    text-align: center;
+    margin-top: 20px;
+    outline: none;
+}
+.retro-input:focus {
+    border-color: var(--main-color);
+}
+
+/* VN Screen */
+#vn-screen {
+    background-color: #0a0a0a;
+}
+.vn-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    position: relative;
+}
+.vn-character {
+    max-width: 90%;
+    max-height: 70%;
+    object-fit: contain;
+    margin-bottom: auto; /* Pushes dialogue box to bottom */
+    margin-top: auto;
+}
+.vn-dialogue-box {
+    width: 90%;
+    height: 120px;
+    background-color: rgba(0, 0, 0, 0.85);
+    border: 4px solid #fff;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    position: relative;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
+.vn-text {
+    color: #fff;
+    font-size: 20px;
+    line-height: 1.5;
+    letter-spacing: 1px;
+}
+.vn-click-indicator {
+    position: absolute;
+    bottom: 10px;
+    right: 15px;
+    color: #fff;
+    font-size: 16px;
+    animation: bounce 1s infinite;
+}
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+.vn-choices {
+    position: absolute;
+    bottom: 160px; /* Above dialogue box */
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 80%;
+    max-width: 300px;
+}
+.vn-choice-btn {
+    width: 100%;
+    margin-top: 0;
+}
+
 /* Transitions */
 .fade-out {
     animation: fadeOutEffect 0.5s forwards ease-in-out;
