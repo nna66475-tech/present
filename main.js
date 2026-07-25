@@ -34,6 +34,13 @@ const CHARACTERS = {
         tiki: 'yuki_tiki.gif',
         win: 'yuki_win.gif',
         lose: 'yuki_lose.gif'
+    },
+    tanabe: {
+        name: '田辺歩',
+        difficulty: 'normal',
+        tiki: '',
+        win: '',
+        lose: ''
     }
 };
 
@@ -71,6 +78,14 @@ let isPlayerTurn = true;
 let canClick = true;
 let cpuMemory = {}; 
 /* cpuMemory format: { cardId: imageSrc } */
+let tanabeWinCount = 0;
+
+// VN System Variables
+let currentVnSequence = [];
+let currentVnIndex = 0;
+let onVnComplete = null;
+let isTyping = false;
+let typingTimeout = null;
 
 // Screen Transition
 function showScreen(screenId) {
@@ -125,6 +140,113 @@ document.querySelectorAll('.char-card').forEach(card => {
     });
 });
 
+// Hidden NPC Button
+document.getElementById('hidden-npc-btn').addEventListener('click', () => {
+    seSelect.play();
+    triggerRabbitTransition(() => {
+        document.getElementById('hidden-npc-input').value = '';
+        document.getElementById('hidden-npc-result').style.display = 'none';
+        showScreen('hidden-npc-screen');
+    });
+});
+
+// Hidden NPC Back
+document.getElementById('hidden-npc-back').addEventListener('click', () => {
+    seSelect.play();
+    triggerRabbitTransition(() => {
+        showScreen('select-screen');
+    });
+});
+
+// Hidden NPC Submit
+document.getElementById('hidden-npc-submit').addEventListener('click', () => {
+    seSelect.play();
+    const input = document.getElementById('hidden-npc-input').value.trim();
+    if (input === '田辺歩' || input === '大村翼') {
+        document.getElementById('hidden-npc-result').style.display = 'block';
+    } else {
+        document.getElementById('hidden-npc-result').style.display = 'none';
+    }
+});
+
+// Tanabe Card Click
+document.getElementById('tanabe-char-card').addEventListener('click', () => {
+    seSelect.play();
+    currentCharId = 'tanabe';
+    tanabeWinCount = 0; // Reset win count when starting fresh
+    
+    const preMatchSeq = [
+        { text: 'は？なぜ俺が神経衰弱を？', img: 'tanabe_ha_ake.PNG' },
+        { text: 'やらない', img: 'tanabe_magao_ake.PNG' },
+        { text: '子供がやる遊びだろ', img: 'tanabe_sune.PNG' },
+        { text: 'は？なんで他のやつとやるんだ', img: 'tanabe_ira.PNG' },
+        { text: 'チッ……しょうがない……', img: 'tanabe_tojime.PNG' },
+        { text: 'お前を負かすのは……', img: 'tanabe_tojime.PNG' },
+        { text: '俺だけだ', img: 'tanabe_ha_ake.PNG' }
+    ];
+    
+    triggerRabbitTransition(() => {
+        playVnSequence(preMatchSeq, () => {
+            // After dialogue, start match directly
+            initGame();
+            showScreen('game-screen');
+        });
+    });
+});
+
+// VN System Logic
+function playVnSequence(sequence, onCompleteCallback) {
+    currentVnSequence = sequence;
+    currentVnIndex = 0;
+    onVnComplete = onCompleteCallback;
+    document.getElementById('vn-choices').style.display = 'none';
+    showScreen('vn-screen');
+    showNextVnDialogue();
+}
+
+function showNextVnDialogue() {
+    if (currentVnIndex >= currentVnSequence.length) {
+        if (onVnComplete) onVnComplete();
+        return;
+    }
+    
+    const step = currentVnSequence[currentVnIndex];
+    document.getElementById('vn-character-img').src = step.img;
+    const textBox = document.getElementById('vn-text');
+    textBox.textContent = '';
+    
+    isTyping = true;
+    let charIndex = 0;
+    
+    function typeChar() {
+        if (charIndex < step.text.length) {
+            textBox.textContent += step.text.charAt(charIndex);
+            charIndex++;
+            typingTimeout = setTimeout(typeChar, 50); // Typewriter speed
+        } else {
+            isTyping = false;
+        }
+    }
+    typeChar();
+}
+
+document.getElementById('vn-dialogue-box').addEventListener('click', () => {
+    // If choices are showing, don't allow advancing by clicking the box
+    if (document.getElementById('vn-choices').style.display === 'flex') return;
+
+    if (isTyping) {
+        // Skip typing
+        clearTimeout(typingTimeout);
+        isTyping = false;
+        document.getElementById('vn-text').textContent = currentVnSequence[currentVnIndex].text;
+    } else {
+        // Next dialogue
+        seSelect.play();
+        currentVnIndex++;
+        showNextVnDialogue();
+    }
+});
+
 // 4. Pre Match -> Game
 document.getElementById('start-match-btn').addEventListener('click', () => {
     seSelect.play();
@@ -148,6 +270,14 @@ function initGame() {
     
     document.getElementById('player-score').textContent = '0';
     document.getElementById('cpu-score').textContent = '0';
+    
+    if (currentCharId === 'tanabe') {
+        document.getElementById('tanabe-win-count-display').style.display = 'inline';
+        document.getElementById('tanabe-win-count').textContent = tanabeWinCount;
+    } else {
+        document.getElementById('tanabe-win-count-display').style.display = 'none';
+    }
+    
     updateTurnDisplay();
 
     // Shuffle Deck
@@ -359,8 +489,12 @@ function endGame() {
     const char = CHARACTERS[currentCharId];
     
     setTimeout(() => {
-        // Player won if playerScore > cpuScore
-        // User requested: "杏に勝利した場合、anzu_lose.gif... 敗北した場合、anzu_win.gif..."
+        if (currentCharId === 'tanabe') {
+            handleTanabeEndGame();
+            return;
+        }
+
+        // Standard Characters
         if (playerScore >= cpuScore) { // Player Win
             seClear.play();
             document.getElementById('result-gif').src = char.lose; // CPU loses
@@ -378,6 +512,80 @@ function endGame() {
         });
     }, 800);
 }
+
+function handleTanabeEndGame() {
+    if (playerScore >= cpuScore) {
+        // Player Wins against Tanabe
+        seClear.play();
+        tanabeWinCount++;
+        const winSeq = [
+            { text: '……………', img: 'tanabe_magao_toji.PNG' },
+            { text: '……………………', img: 'tanabe_magao_toji.PNG' },
+            { text: '俺が負けるわけないだろ', img: 'tanabe_magao_ake.PNG' },
+            { text: 'もう一回だ', img: 'tanabe_retry.PNG' }
+        ];
+        triggerRabbitTransition(() => {
+            playVnSequence(winSeq, () => {
+                // Forced retry
+                playBGM();
+                initGame();
+                showScreen('game-screen');
+            });
+        });
+    } else {
+        // Player Loses against Tanabe
+        seDie.play();
+        const loseSeq = [
+            { text: '………………', img: 'tanabe_magao_toji.PNG' },
+            { text: 'フッ…', img: 'tanabe_doya.PNG' },
+            { text: 'お前が俺に勝つなんて100年早いんだよ', img: 'tanabe_doya_ake.PNG' },
+            { text: '何？もう一回？', img: 'tanabe_o.PNG' },
+            { text: 'どうせ負けるだけだ', img: 'tanabe_doya_ake.PNG' }
+        ];
+        triggerRabbitTransition(() => {
+            playVnSequence(loseSeq, () => {
+                // Show choices
+                document.getElementById('vn-choices').style.display = 'flex';
+            });
+        });
+    }
+}
+
+// VN Choices Logic
+document.getElementById('vn-choice-retry').addEventListener('click', () => {
+    seSelect.play();
+    document.getElementById('vn-choices').style.display = 'none';
+    
+    // 1/2 chance to retry
+    if (Math.random() < 0.5) {
+        // Retry
+        playBGM();
+        triggerRabbitTransition(() => {
+            initGame();
+            showScreen('game-screen');
+        });
+    } else {
+        // Fail
+        const failSeq = [
+            { text: '面倒臭い', img: 'tanabe_magao_ake.PNG' },
+            { text: '生徒にでも相手してもらったらどうだ？', img: 'tanabe_doya.PNG' },
+            { text: 'よっぽどいい試合になるさ', img: 'tanabe_doya_ake.PNG' }
+        ];
+        playVnSequence(failSeq, () => {
+            triggerRabbitTransition(() => {
+                showScreen('select-screen');
+            });
+        });
+    }
+});
+
+document.getElementById('vn-choice-quit').addEventListener('click', () => {
+    seSelect.play();
+    document.getElementById('vn-choices').style.display = 'none';
+    triggerRabbitTransition(() => {
+        showScreen('select-screen');
+    });
+});
 
 // Result screen buttons
 document.getElementById('retry-btn').addEventListener('click', () => {
