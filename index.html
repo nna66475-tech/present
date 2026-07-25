@@ -66,6 +66,35 @@
                     </div>
                 </div>
             </div>
+            <button class="retro-btn" id="hidden-npc-btn" style="margin-top: 40px; width: 80%; max-width: 300px;">非公開NPC</button>
+        </div>
+
+        <!-- ３：Hidden NPC Screen -->
+        <div id="hidden-npc-screen" class="screen">
+            <div class="screen-title">フルネームを入力してね</div>
+            <input type="text" id="hidden-npc-input" class="retro-input" placeholder="名前を入力...">
+            <button class="retro-btn" id="hidden-npc-submit">決定</button>
+            <div id="hidden-npc-result" style="display: none; margin-top: 30px; text-align: center;">
+                <div class="char-card" id="tanabe-char-card" data-char="tanabe">
+                    <div class="char-icon-wrapper"><img src="icon_tanabe.PNG" alt="田辺歩" class="char-icon"></div>
+                </div>
+            </div>
+            <button class="retro-btn" id="hidden-npc-back" style="margin-top: 20px;">戻る</button>
+        </div>
+
+        <!-- VN Screen (Visual Novel style dialogue) -->
+        <div id="vn-screen" class="screen">
+            <div class="vn-container">
+                <img src="" alt="キャラクター立ち絵" id="vn-character-img" class="vn-character">
+                <div class="vn-dialogue-box" id="vn-dialogue-box">
+                    <div class="vn-text" id="vn-text"></div>
+                    <div class="vn-click-indicator">▼</div>
+                </div>
+                <div class="vn-choices" id="vn-choices" style="display: none;">
+                    <button class="retro-btn vn-choice-btn" id="vn-choice-retry">もう一度対戦してもらう</button>
+                    <button class="retro-btn vn-choice-btn" id="vn-choice-quit">やめる</button>
+                </div>
+            </div>
         </div>
 
         <!-- ４：Pre-match Screen -->
@@ -78,7 +107,10 @@
         <div id="game-screen" class="screen">
             <div class="game-header">
                 <div id="turn-display" class="turn-indicator player-turn">あなたのターン</div>
-                <div>あなた: <span id="player-score">0</span> | <span id="cpu-name-display">CPU</span>: <span id="cpu-score">0</span></div>
+                <div>
+                    <span id="tanabe-win-count-display" style="display: none; color: gold; margin-right: 15px;">連勝: <span id="tanabe-win-count">0</span></span>
+                    あなた: <span id="player-score">0</span> | <span id="cpu-name-display">CPU</span>: <span id="cpu-score">0</span>
+                </div>
             </div>
             <div class="board-container">
                 <div class="grid-board" id="board"></div>
