@@ -260,6 +260,21 @@ function playVnSequenceWithPause(sequence, onPauseCallback) {
     showNextVnDialogue();
 }
 
+function safeSetSrc(imgEl, src) {
+    if (!imgEl) return;
+    imgEl.style.visibility = 'visible';
+    imgEl.src = src;
+    imgEl.onerror = function() {
+        if (this.src.endsWith('.PNG')) {
+            this.src = this.src.replace(/\.PNG$/, '.png');
+        } else if (this.src.endsWith('.png')) {
+            this.src = this.src.replace(/\.png$/, '.PNG');
+        } else {
+            this.style.visibility = 'hidden';
+        }
+    };
+}
+
 function showNextVnDialogue() {
     if (currentVnIndex >= currentVnSequence.length) {
         if (onVnComplete) onVnComplete();
@@ -267,7 +282,7 @@ function showNextVnDialogue() {
     }
     
     const step = currentVnSequence[currentVnIndex];
-    document.getElementById('vn-character-img').src = step.img;
+    safeSetSrc(document.getElementById('vn-character-img'), step.img);
     const textBox = document.getElementById('vn-text');
     textBox.textContent = '';
     
@@ -393,8 +408,8 @@ let dekopinStep = 0;
 
 function startDekopinSequence() {
     dekopinStep = 0;
-    document.getElementById('dekopin-bg').src = 'cardbayasi1.PNG';
-    document.getElementById('dekopin-hand').src = 'dekopin1.PNG';
+    safeSetSrc(document.getElementById('dekopin-bg'), 'cardbayasi1.PNG');
+    safeSetSrc(document.getElementById('dekopin-hand'), 'dekopin1.PNG');
     document.getElementById('dekopin-hand').style.display = 'block';
     document.getElementById('dekopin-hand').classList.add('shake-anim');
     // Remove any existing dialogue box
@@ -408,13 +423,13 @@ document.getElementById('dekopin-screen').addEventListener('click', () => {
     if (dekopinStep === 0) {
         // Tap 1: dekopin1 → dekopin2, cardbayasi1 → cardbayasi2
         document.getElementById('dekopin-hand').classList.remove('shake-anim');
-        document.getElementById('dekopin-hand').src = 'dekopin2.PNG';
-        document.getElementById('dekopin-bg').src = 'cardbayasi2.PNG';
+        safeSetSrc(document.getElementById('dekopin-hand'), 'dekopin2.PNG');
+        safeSetSrc(document.getElementById('dekopin-bg'), 'cardbayasi2.PNG');
         dekopinStep = 1;
     } else if (dekopinStep === 1) {
         // Tap 2: dekopin2 disappears, cardbayasi2 → cardbayasi3, dialogue appears
         document.getElementById('dekopin-hand').style.display = 'none';
-        document.getElementById('dekopin-bg').src = 'cardbayasi3.PNG';
+        safeSetSrc(document.getElementById('dekopin-bg'), 'cardbayasi3.PNG');
         dekopinStep = 2;
         // Show dialogue box
         showDekopinDialogue('お前とはもう二度とやらない');
@@ -432,7 +447,7 @@ document.getElementById('dekopin-screen').addEventListener('click', () => {
                 { text: '嫌いだ', img: 'okoru1.PNG' },
                 { text: '鬱陶しい', img: 'okoru1.PNG' },
                 { text: '死んだほうがいいんじゃないか', img: 'okoru1.PNG' },
-                { text: 'あの時イゴーロナクに殺されておけばよかったのに', img: 'okoru1.PNG' },
+                { text: 'あの時イゴーロナクに殺されてればよかったのに', img: 'okoru1.PNG' },
                 { text: 'やらないって言ってるだろ', img: 'okoru1.PNG' },
                 { text: '……', img: 'okoru2.PNG' },
                 { text: '……………', img: 'okoru2.PNG' },
@@ -879,7 +894,7 @@ function handleTakebayashiEndGame() {
             const losePrankSeq = [
                 { text: '俺の勝ち、だな', img: 'metumuri.PNG' },
                 { text: '楽勝すぎて欠伸が出る', img: 'wara.PNG' },
-                { text: 'じゃあ大人しく土下座してもらおうか', img: 'wara.PNG' },
+                { text: 'じゃあ大人し土下座してもらおうか', img: 'wara.PNG' },
                 { text: 'デコピンも忘れるなよ', img: 'paku3.PNG' }
             ];
             triggerRabbitTransition(() => {
