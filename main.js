@@ -41,6 +41,13 @@ const CHARACTERS = {
         tiki: '',
         win: '',
         lose: ''
+    },
+    takebayashi: {
+        name: '竹林蓮',
+        difficulty: 'extreme', // will map to memoryChance=0.99
+        tiki: '',
+        win: '',
+        lose: ''
     }
 };
 
@@ -79,6 +86,11 @@ let canClick = true;
 let cpuMemory = {}; 
 /* cpuMemory format: { cardId: imageSrc } */
 let tanabeWinCount = 0;
+
+// Takebayashi state
+let tbPhase = 'first';  // 'first' = 1st battle, 'second' = 2nd battle (mid-game prank prompt), 'third' = 3rd battle (hard battle after prank)
+let tbDidPrank = false;
+let tbHasPromptedPrank = false;
 
 // VN System Variables
 let currentVnSequence = [];
@@ -159,13 +171,35 @@ document.getElementById('hidden-npc-back').addEventListener('click', () => {
 });
 
 // Hidden NPC Submit
-document.getElementById('hidden-npc-submit').addEventListener('click', () => {
+function handleHiddenNpcSubmit() {
     seSelect.play();
-    const input = document.getElementById('hidden-npc-input').value.trim();
-    if (input === '田辺歩' || input === '大村翼') {
-        document.getElementById('hidden-npc-result').style.display = 'block';
+    const rawInput = document.getElementById('hidden-npc-input').value;
+    const input = rawInput.trim().replace(/[\s\u3000]+/g, '');
+    const resultDiv = document.getElementById('hidden-npc-result');
+    const tanbeCard = document.getElementById('tanabe-char-card');
+    const tbCard = document.getElementById('takebayashi-char-card');
+
+    if (input === '田辺歩' || input === '大村翼' || input === '田辺' || input === '大村') {
+        tanbeCard.style.display = 'flex';
+        tbCard.style.display = 'none';
+        resultDiv.style.display = 'block';
+    } else if (input === '竹林蓮' || input === '竹林' || input === '蓮' || input.toLowerCase() === 'takebayashi' || input === 'たけばやしれん' || input === 'たけばやし') {
+        tanbeCard.style.display = 'none';
+        tbCard.style.display = 'flex';
+        resultDiv.style.display = 'block';
     } else {
-        document.getElementById('hidden-npc-result').style.display = 'none';
+        tanbeCard.style.display = 'none';
+        tbCard.style.display = 'none';
+        resultDiv.style.display = 'none';
+    }
+}
+
+document.getElementById('hidden-npc-submit').addEventListener('click', handleHiddenNpcSubmit);
+
+// Enter key press support for hidden-npc-input
+document.getElementById('hidden-npc-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        handleHiddenNpcSubmit();
     }
 });
 
@@ -199,7 +233,29 @@ function playVnSequence(sequence, onCompleteCallback) {
     currentVnSequence = sequence;
     currentVnIndex = 0;
     onVnComplete = onCompleteCallback;
+    // Hide all choice panels
     document.getElementById('vn-choices').style.display = 'none';
+    document.getElementById('vn-tb-start').style.display = 'none';
+    document.getElementById('vn-tb-prank').style.display = 'none';
+    document.getElementById('vn-click-indicator').style.display = 'block';
+    // Hide tiki, show character img
+    document.getElementById('vn-tiki-img').style.display = 'none';
+    document.getElementById('vn-character-img').style.display = 'block';
+    showScreen('vn-screen');
+    showNextVnDialogue();
+}
+
+// Same as playVnSequence but calls onPauseCallback at end (doesn't auto-complete)
+function playVnSequenceWithPause(sequence, onPauseCallback) {
+    currentVnSequence = sequence;
+    currentVnIndex = 0;
+    onVnComplete = onPauseCallback; // treated as pause point
+    document.getElementById('vn-choices').style.display = 'none';
+    document.getElementById('vn-tb-start').style.display = 'none';
+    document.getElementById('vn-tb-prank').style.display = 'none';
+    document.getElementById('vn-click-indicator').style.display = 'block';
+    document.getElementById('vn-tiki-img').style.display = 'none';
+    document.getElementById('vn-character-img').style.display = 'block';
     showScreen('vn-screen');
     showNextVnDialogue();
 }
@@ -231,8 +287,13 @@ function showNextVnDialogue() {
 }
 
 document.getElementById('vn-dialogue-box').addEventListener('click', () => {
-    // If choices are showing, don't allow advancing by clicking the box
-    if (document.getElementById('vn-choices').style.display === 'flex') return;
+    // If any choices are showing, don't allow advancing by clicking the box
+    const choicesShowing = [
+        document.getElementById('vn-choices'),
+        document.getElementById('vn-tb-start'),
+        document.getElementById('vn-tb-prank')
+    ].some(el => el.style.display === 'flex');
+    if (choicesShowing) return;
 
     if (isTyping) {
         // Skip typing
@@ -246,6 +307,191 @@ document.getElementById('vn-dialogue-box').addEventListener('click', () => {
         showNextVnDialogue();
     }
 });
+
+// =====================================
+// TAKEBAYASHI LOGIC
+// =====================================
+
+// Takebayashi Card Click
+document.getElementById('takebayashi-char-card').addEventListener('click', () => {
+    seSelect.play();
+    currentCharId = 'takebayashi';
+    tbPhase = 'first';
+    tbDidPrank = false;
+    tbHasPromptedPrank = false;
+
+    // Pre-match dialogue (1-8), then show 対戦する button
+    const preMatchSeq = [
+        { text: '………', img: 'taiki.gif' },
+        { text: '………は？', img: 'paku1.PNG' },
+        { text: '神経衰弱？', img: 'paku1.PNG' },
+        { text: 'お前が…？', img: 'paku3.PNG' },
+        { text: '俺と？', img: 'paku3.PNG' },
+        { text: 'バカも休み休み言ったらどうだ', img: 'wara.PNG' },
+        { text: 'でも……そうだな', img: 'metumuri.PNG' },
+        { text: '俺が勝ったら土下座するってんなら', img: 'wara.PNG' },
+        { text: '考えてやるけど', img: 'wara.PNG' }
+    ];
+
+    triggerRabbitTransition(() => {
+        // Show pre-match sequence, then pause for "対戦する" button
+        playVnSequenceWithPause(preMatchSeq, () => {
+            // Pause: show the 対戦する button
+            document.getElementById('vn-tb-start').style.display = 'flex';
+            document.getElementById('vn-click-indicator').style.display = 'none';
+        });
+    });
+});
+
+// "対戦する" mid-VN button for Takebayashi
+document.getElementById('vn-tb-start-btn').addEventListener('click', () => {
+    seSelect.play();
+    document.getElementById('vn-tb-start').style.display = 'none';
+    document.getElementById('vn-click-indicator').style.display = 'block';
+
+    // Play line 9 then wait for player tap to trigger iris out -> game
+    const lastSeq = [
+        { text: '終わってから後悔するなよ', img: 'metumuri.PNG' }
+    ];
+    playVnSequence(lastSeq, () => {
+        triggerRabbitTransition(() => {
+            playBGM();
+            initGame();
+            showScreen('game-screen');
+        });
+    });
+});
+
+// Mid-game Prank Modal Buttons (Match 2)
+document.getElementById('prank-yes-btn').addEventListener('click', () => {
+    seSelect.play();
+    document.getElementById('prank-modal').style.display = 'none';
+    tbDidPrank = true;
+    stopBGM();
+    triggerRabbitTransition(() => {
+        startDekopinSequence();
+    });
+});
+
+document.getElementById('prank-no-btn').addEventListener('click', () => {
+    seSelect.play();
+    document.getElementById('prank-modal').style.display = 'none';
+    tbDidPrank = false;
+    // Resume match 2 (CPU continues to finish match)
+    if (checkGameOver()) {
+        endGame();
+    } else {
+        canClick = isPlayerTurn;
+        if (!isPlayerTurn) {
+            setTimeout(cpuTurn, 800);
+        }
+    }
+});
+
+// --- Dekopin Sequence ---
+let dekopinStep = 0;
+
+function startDekopinSequence() {
+    dekopinStep = 0;
+    document.getElementById('dekopin-bg').src = 'cardbayasi1.PNG';
+    document.getElementById('dekopin-hand').src = 'dekopin1.PNG';
+    document.getElementById('dekopin-hand').style.display = 'block';
+    document.getElementById('dekopin-hand').classList.add('shake-anim');
+    // Remove any existing dialogue box
+    const oldBox = document.querySelector('.dekopin-dialogue-box');
+    if (oldBox) oldBox.remove();
+    showScreen('dekopin-screen');
+}
+
+document.getElementById('dekopin-screen').addEventListener('click', () => {
+    seSelect.play();
+    if (dekopinStep === 0) {
+        // Tap 1: dekopin1 → dekopin2, cardbayasi1 → cardbayasi2
+        document.getElementById('dekopin-hand').classList.remove('shake-anim');
+        document.getElementById('dekopin-hand').src = 'dekopin2.PNG';
+        document.getElementById('dekopin-bg').src = 'cardbayasi2.PNG';
+        dekopinStep = 1;
+    } else if (dekopinStep === 1) {
+        // Tap 2: dekopin2 disappears, cardbayasi2 → cardbayasi3, dialogue appears
+        document.getElementById('dekopin-hand').style.display = 'none';
+        document.getElementById('dekopin-bg').src = 'cardbayasi3.PNG';
+        dekopinStep = 2;
+        // Show dialogue box
+        showDekopinDialogue('お前とはもう二度とやらない');
+    } else if (dekopinStep === 2) {
+        // Tap on dialogue: transition to okoru2 screen in VN
+        triggerRabbitTransition(() => {
+            // Show okoru2 first (………), then long angry dialogue
+            const angrySeq = [
+                { text: '………', img: 'okoru2.PNG' },
+                { text: 'やらない', img: 'okoru1.PNG' },
+                { text: 'どっかいけ', img: 'okoru1.PNG' },
+                { text: 'お前なんか嫌いだ', img: 'okoru1.PNG' },
+                { text: '知らない', img: 'okoru1.PNG' },
+                { text: 'しつこい', img: 'okoru1.PNG' },
+                { text: '嫌いだ', img: 'okoru1.PNG' },
+                { text: '鬱陶しい', img: 'okoru1.PNG' },
+                { text: '死んだほうがいいんじゃないか', img: 'okoru1.PNG' },
+                { text: 'あの時イゴーロナクに殺されてればよかったのに', img: 'okoru1.PNG' },
+                { text: 'やらないって言ってるだろ', img: 'okoru1.PNG' },
+                { text: '……', img: 'okoru2.PNG' },
+                { text: '……………', img: 'okoru2.PNG' },
+                { text: '………………', img: 'okoru2.PNG' },
+                { text: '……はぁ', img: 'okoru1.PNG' },
+                { text: 'この一回やったら二度とやらないからな', img: 'okoru1.PNG' },
+                { text: 'お前が負けたら土下座と追加でデコピンだから', img: 'okoru1.PNG' }
+            ];
+            playVnSequenceWithPause(angrySeq, () => {
+                // After last line, show start button
+                document.getElementById('vn-tb-start').style.display = 'flex';
+                document.getElementById('vn-click-indicator').style.display = 'none';
+                
+                // Override the start button to display last line and wait for tap before starting match 3
+                document.getElementById('vn-tb-start-btn').onclick = () => {
+                    seSelect.play();
+                    document.getElementById('vn-tb-start').style.display = 'none';
+                    document.getElementById('vn-click-indicator').style.display = 'block';
+                    tbPhase = 'third';
+
+                    const finalSeq = [
+                        { text: '終わってから後悔するなよ', img: 'metumuri.PNG' }
+                    ];
+                    playVnSequence(finalSeq, () => {
+                        triggerRabbitTransition(() => {
+                            playBGM();
+                            initGame();
+                            showScreen('game-screen');
+                        });
+                    });
+                };
+            });
+        });
+    }
+});
+
+function showDekopinDialogue(text) {
+    let box = document.querySelector('.dekopin-dialogue-box');
+    if (!box) {
+        box = document.createElement('div');
+        box.className = 'dekopin-dialogue-box';
+        box.innerHTML = `
+            <div class="vn-text" id="dekopin-vn-text"></div>
+            <div class="vn-click-indicator">▼</div>
+        `;
+        document.querySelector('.dekopin-container').appendChild(box);
+    }
+    const textEl = document.getElementById('dekopin-vn-text');
+    textEl.textContent = '';
+    let i = 0;
+    function typeNext() {
+        if (i < text.length) {
+            textEl.textContent += text.charAt(i);
+            i++;
+            setTimeout(typeNext, 50);
+        }
+    }
+    typeNext();
+}
 
 // 4. Pre Match -> Game
 document.getElementById('start-match-btn').addEventListener('click', () => {
@@ -276,6 +522,15 @@ function initGame() {
         document.getElementById('tanabe-win-count').textContent = tanabeWinCount;
     } else {
         document.getElementById('tanabe-win-count-display').style.display = 'none';
+    }
+    
+    if (currentCharId === 'takebayashi') {
+        document.getElementById('prank-modal').style.display = 'none';
+        if (tbPhase === 'first' || tbPhase === 'second') {
+            CHARACTERS.takebayashi.difficulty = 'extreme';
+        } else {
+            CHARACTERS.takebayashi.difficulty = 'hard';
+        }
     }
     
     updateTurnDisplay();
@@ -374,6 +629,17 @@ function checkMatch() {
             }
 
             flippedCards = [];
+
+            // Mid-game prank prompt for Takebayashi Match 2 when CPU score reaches 4
+            if (currentCharId === 'takebayashi' && tbPhase === 'second' && !tbHasPromptedPrank && cpuScore >= 4) {
+                tbHasPromptedPrank = true;
+                canClick = false;
+                setTimeout(() => {
+                    document.getElementById('prank-modal').style.display = 'flex';
+                }, 400);
+                return;
+            }
+
             if (checkGameOver()) {
                 endGame();
             } else {
@@ -418,6 +684,7 @@ function cpuTurn() {
     let memoryChance = 0.5; // normal
     if (difficulty === 'easy') memoryChance = 0.2;
     if (difficulty === 'hard') memoryChance = 0.9;
+    if (difficulty === 'extreme') memoryChance = 1.0;
 
     let foundPair = null;
     const memoryIds = Object.keys(cpuMemory);
@@ -493,6 +760,10 @@ function endGame() {
             handleTanabeEndGame();
             return;
         }
+        if (currentCharId === 'takebayashi') {
+            handleTakebayashiEndGame();
+            return;
+        }
 
         // Standard Characters
         if (playerScore >= cpuScore) { // Player Win
@@ -548,6 +819,77 @@ function handleTanabeEndGame() {
                 document.getElementById('vn-choices').style.display = 'flex';
             });
         });
+    }
+}
+
+function handleTakebayashiEndGame() {
+    if (tbPhase === 'first') {
+        seDie.play();
+        const loseSeq = [
+            { text: 'もう終わりか？', img: 'mizu1.PNG' },
+            { text: '退屈だったな', img: 'mizu2.PNG' },
+            { text: 'あまりにも味気ないからもう一度対戦してやってもいいぞ', img: 'mizu1.PNG' },
+            { text: '暇つぶしくらいにはなってくれよ', img: 'mizu2.PNG' }
+        ];
+        triggerRabbitTransition(() => {
+            playVnSequence(loseSeq, () => {
+                // Immediately transition to Match 2
+                tbPhase = 'second';
+                tbHasPromptedPrank = false;
+                triggerRabbitTransition(() => {
+                    playBGM();
+                    initGame();
+                    showScreen('game-screen');
+                });
+            });
+        });
+    } else if (tbPhase === 'second') {
+        // Match 2 finished without prank (user selected "しない" or didn't prank)
+        seDie.play();
+        const loseNoPrankSeq = [
+            { text: 'また俺の勝ち', img: 'wara.PNG' },
+            { text: '退屈だった', img: 'paku3.PNG' },
+            { text: '二度と俺に頭で勝とうとしないことだな', img: 'metumuri.PNG' }
+        ];
+        triggerRabbitTransition(() => {
+            playVnSequence(loseNoPrankSeq, () => {
+                triggerRabbitTransition(() => {
+                    showScreen('select-screen');
+                });
+            });
+        });
+    } else if (tbPhase === 'third') {
+        // Match 3 outcome (after Dekopin)
+        if (playerScore >= cpuScore) {
+            seClear.play();
+            const winSeq = [
+                { text: 'まさかイカサマしてないよな…？', img: 'paku1.PNG' },
+                { text: 'チッ……', img: 'hon1.PNG' },
+                { text: 'お前なんか大嫌いだ', img: 'okoru3.PNG' }
+            ];
+            triggerRabbitTransition(() => {
+                playVnSequence(winSeq, () => {
+                    triggerRabbitTransition(() => {
+                        showScreen('select-screen');
+                    });
+                });
+            });
+        } else {
+            seDie.play();
+            const losePrankSeq = [
+                { text: '俺の勝ち、だな', img: 'metumuri.PNG' },
+                { text: '楽勝すぎて欠伸が出る', img: 'wara.PNG' },
+                { text: 'じゃあ大人し土下座してもらおうか', img: 'wara.PNG' },
+                { text: 'デコピンも忘れるなよ', img: 'paku3.PNG' }
+            ];
+            triggerRabbitTransition(() => {
+                playVnSequence(losePrankSeq, () => {
+                    triggerRabbitTransition(() => {
+                        showScreen('select-screen');
+                    });
+                });
+            });
+        }
     }
 }
 

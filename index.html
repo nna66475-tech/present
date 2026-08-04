@@ -75,8 +75,13 @@
             <input type="text" id="hidden-npc-input" class="retro-input" placeholder="名前を入力...">
             <button class="retro-btn" id="hidden-npc-submit">決定</button>
             <div id="hidden-npc-result" style="display: none; margin-top: 30px; text-align: center;">
-                <div class="char-card" id="tanabe-char-card" data-char="tanabe">
-                    <div class="char-icon-wrapper"><img src="icon_tanabe.PNG" alt="田辺歩" class="char-icon"></div>
+                <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+                    <div class="char-card" id="tanabe-char-card" data-char="tanabe">
+                        <div class="char-icon-wrapper"><img src="icon_tanabe.PNG" alt="田辺歩" class="char-icon"></div>
+                    </div>
+                    <div class="char-card" id="takebayashi-char-card" data-char="takebayashi" style="display:none;">
+                        <div class="char-icon-wrapper"><img src="takebayasi_icon.PNG" alt="竹林蓮" class="char-icon" onerror="if(this.src.indexOf('takebayasi_icon.PNG')!==-1){this.src='takebayashi_icon.PNG';}else if(this.src.indexOf('takebayashi_icon.PNG')!==-1){this.src='takebayasi_icon.png';}"></div>
+                    </div>
                 </div>
             </div>
             <button class="retro-btn" id="hidden-npc-back" style="margin-top: 20px;">戻る</button>
@@ -86,14 +91,34 @@
         <div id="vn-screen" class="screen">
             <div class="vn-container">
                 <img src="" alt="キャラクター立ち絵" id="vn-character-img" class="vn-character">
+                <!-- Takebayashi GIF pre-match display area (taiki.gif) -->
+                <img src="" alt="" id="vn-tiki-img" class="vn-tiki" style="display:none;">
                 <div class="vn-dialogue-box" id="vn-dialogue-box">
                     <div class="vn-text" id="vn-text"></div>
-                    <div class="vn-click-indicator">▼</div>
+                    <div class="vn-click-indicator" id="vn-click-indicator">▼</div>
                 </div>
+                <!-- Tanabe choices -->
                 <div class="vn-choices" id="vn-choices" style="display: none;">
                     <button class="retro-btn vn-choice-btn" id="vn-choice-retry">もう一度対戦してもらう</button>
                     <button class="retro-btn vn-choice-btn" id="vn-choice-quit">やめる</button>
                 </div>
+                <!-- Takebayashi: start match button (mid-dialogue) -->
+                <div class="vn-choices" id="vn-tb-start" style="display: none;">
+                    <button class="retro-btn vn-choice-btn" id="vn-tb-start-btn">対戦する</button>
+                </div>
+                <!-- Takebayashi: prank choice -->
+                <div class="vn-choices" id="vn-tb-prank" style="display: none;">
+                    <button class="retro-btn vn-choice-btn" id="vn-tb-prank-yes">イタズラする</button>
+                    <button class="retro-btn vn-choice-btn" id="vn-tb-prank-no">イタズラしない</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dekopin Screen -->
+        <div id="dekopin-screen" class="screen">
+            <div class="dekopin-container">
+                <img src="cardbayasi1.PNG" alt="" id="dekopin-bg" class="dekopin-bg">
+                <img src="dekopin1.PNG" alt="" id="dekopin-hand" class="dekopin-hand shake-anim">
             </div>
         </div>
 
@@ -114,6 +139,16 @@
             </div>
             <div class="board-container">
                 <div class="grid-board" id="board"></div>
+            </div>
+            <!-- Prank Modal (Mid-game choice for Takebayashi match 2) -->
+            <div id="prank-modal" class="prank-modal-overlay" style="display: none;">
+                <div class="prank-modal-box">
+                    <div class="prank-modal-title">負けそうだ！イタズラしますか？</div>
+                    <div class="prank-modal-buttons">
+                        <button class="retro-btn prank-btn" id="prank-yes-btn">する</button>
+                        <button class="retro-btn prank-btn" id="prank-no-btn">しない</button>
+                    </div>
+                </div>
             </div>
         </div>
 
