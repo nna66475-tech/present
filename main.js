@@ -230,6 +230,8 @@ document.getElementById('tanabe-char-card').addEventListener('click', () => {
 
 // VN System Logic
 function playVnSequence(sequence, onCompleteCallback) {
+    if (typingTimeout) clearTimeout(typingTimeout);
+    isTyping = false;
     currentVnSequence = sequence;
     currentVnIndex = 0;
     onVnComplete = onCompleteCallback;
@@ -247,6 +249,8 @@ function playVnSequence(sequence, onCompleteCallback) {
 
 // Same as playVnSequence but calls onPauseCallback at end (doesn't auto-complete)
 function playVnSequenceWithPause(sequence, onPauseCallback) {
+    if (typingTimeout) clearTimeout(typingTimeout);
+    isTyping = false;
     currentVnSequence = sequence;
     currentVnIndex = 0;
     onVnComplete = onPauseCallback; // treated as pause point
@@ -276,6 +280,9 @@ function safeSetSrc(imgEl, src) {
 }
 
 function showNextVnDialogue() {
+    if (typingTimeout) clearTimeout(typingTimeout);
+    isTyping = false;
+
     if (currentVnIndex >= currentVnSequence.length) {
         if (onVnComplete) onVnComplete();
         return;
