@@ -416,9 +416,6 @@ let dekopinStep = 0;
 function startDekopinSequence() {
     dekopinStep = 0;
     safeSetSrc(document.getElementById('dekopin-bg'), 'cardbayasi1.PNG');
-    safeSetSrc(document.getElementById('dekopin-hand'), 'dekopin1.PNG');
-    document.getElementById('dekopin-hand').style.display = 'block';
-    document.getElementById('dekopin-hand').classList.add('shake-anim');
     // Remove any existing dialogue box
     const oldBox = document.querySelector('.dekopin-dialogue-box');
     if (oldBox) oldBox.remove();
@@ -428,14 +425,11 @@ function startDekopinSequence() {
 document.getElementById('dekopin-screen').addEventListener('click', () => {
     seSelect.play();
     if (dekopinStep === 0) {
-        // Tap 1: dekopin1 → dekopin2, cardbayasi1 → cardbayasi2
-        document.getElementById('dekopin-hand').classList.remove('shake-anim');
-        safeSetSrc(document.getElementById('dekopin-hand'), 'dekopin2.PNG');
+        // Tap 1: cardbayasi1 → cardbayasi2
         safeSetSrc(document.getElementById('dekopin-bg'), 'cardbayasi2.PNG');
         dekopinStep = 1;
     } else if (dekopinStep === 1) {
-        // Tap 2: dekopin2 disappears, cardbayasi2 → cardbayasi3, dialogue appears
-        document.getElementById('dekopin-hand').style.display = 'none';
+        // Tap 2: cardbayasi2 → cardbayasi3, dialogue appears
         safeSetSrc(document.getElementById('dekopin-bg'), 'cardbayasi3.PNG');
         dekopinStep = 2;
         // Show dialogue box
