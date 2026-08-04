@@ -432,7 +432,7 @@ document.getElementById('dekopin-screen').addEventListener('click', () => {
                 { text: '嫌いだ', img: 'okoru1.PNG' },
                 { text: '鬱陶しい', img: 'okoru1.PNG' },
                 { text: '死んだほうがいいんじゃないか', img: 'okoru1.PNG' },
-                { text: 'あの時イゴーロナクに殺されてればよかったのに', img: 'okoru1.PNG' },
+                { text: 'あの時イゴーロナクに殺されておけばよかったのに', img: 'okoru1.PNG' },
                 { text: 'やらないって言ってるだろ', img: 'okoru1.PNG' },
                 { text: '……', img: 'okoru2.PNG' },
                 { text: '……………', img: 'okoru2.PNG' },
@@ -879,7 +879,7 @@ function handleTakebayashiEndGame() {
             const losePrankSeq = [
                 { text: '俺の勝ち、だな', img: 'metumuri.PNG' },
                 { text: '楽勝すぎて欠伸が出る', img: 'wara.PNG' },
-                { text: 'じゃあ大人し土下座してもらおうか', img: 'wara.PNG' },
+                { text: 'じゃあ大人しく土下座してもらおうか', img: 'wara.PNG' },
                 { text: 'デコピンも忘れるなよ', img: 'paku3.PNG' }
             ];
             triggerRabbitTransition(() => {
