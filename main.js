@@ -865,24 +865,10 @@ function handleTakebayashiEndGame() {
                 });
             });
         });
-    } else if (tbPhase === 'second') {
-        // Match 2 finished without prank (user selected "しない" or didn't prank)
-        seDie.play();
-        const loseNoPrankSeq = [
-            { text: 'また俺の勝ち', img: 'wara.PNG' },
-            { text: '退屈だった', img: 'paku3.PNG' },
-            { text: '二度と俺に頭で勝とうとしないことだな', img: 'metumuri.PNG' }
-        ];
-        triggerRabbitTransition(() => {
-            playVnSequence(loseNoPrankSeq, () => {
-                triggerRabbitTransition(() => {
-                    showScreen('select-screen');
-                });
-            });
-        });
-    } else if (tbPhase === 'third') {
-        // Match 3 outcome (after Dekopin)
+    } else {
+        // Match 2 or Match 3 outcome
         if (playerScore >= cpuScore) {
+            // Player Win
             seClear.play();
             const winSeq = [
                 { text: 'まさかイカサマしてないよな…？', img: 'paku1.PNG' },
@@ -897,15 +883,25 @@ function handleTakebayashiEndGame() {
                 });
             });
         } else {
+            // Player Lose
             seDie.play();
-            const losePrankSeq = [
-                { text: '俺の勝ち、だな', img: 'metumuri.PNG' },
-                { text: '楽勝すぎて欠伸が出る', img: 'wara.PNG' },
-                { text: 'じゃあ大人し土下座してもらおうか', img: 'wara.PNG' },
-                { text: 'デコピンも忘れるなよ', img: 'paku3.PNG' }
-            ];
+            let loseSeq;
+            if (tbDidPrank || tbPhase === 'third') {
+                loseSeq = [
+                    { text: '俺の勝ち、だな', img: 'metumuri.PNG' },
+                    { text: '楽勝すぎて欠伸が出る', img: 'wara.PNG' },
+                    { text: 'じゃあ大人し土下座してもらおうか', img: 'wara.PNG' },
+                    { text: 'デコピンも忘れるなよ', img: 'paku3.PNG' }
+                ];
+            } else {
+                loseSeq = [
+                    { text: 'また俺の勝ち', img: 'wara.PNG' },
+                    { text: '退屈だった', img: 'paku3.PNG' },
+                    { text: '二度と俺に頭で勝とうとしないことだな', img: 'metumuri.PNG' }
+                ];
+            }
             triggerRabbitTransition(() => {
-                playVnSequence(losePrankSeq, () => {
+                playVnSequence(loseSeq, () => {
                     triggerRabbitTransition(() => {
                         showScreen('select-screen');
                     });
